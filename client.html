@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>go websocket</title>
+    <meta charset="utf-8"/>
+</head>
+<body>
+<h2>WebSocket Chat</h2>
+<div id="output"></div>
+<input type="text" id="nickname" placeholder="昵称"></input>
+<input type="text" id="msg" placeholder="消息"></input>
+<button onclick="sendBtnClick()">send</button>
+<button onclick="closeBtnClick()">close</button>
+<script type="text/javascript">
+
+    websocket = new WebSocket("ws://127.0.0.1:7777/ws");
+
+    websocket.onopen = function (e) {
+        console.log("connected")
+    };
+
+    websocket.onclose = function (e) {
+        console.log("closed")
+    };
+
+    websocket.onmessage = function (e) {
+        writeToScreen(e.data);
+    };
+
+    websocket.onerror = function (e) {
+        console.log(e.data)
+    };
+
+    function sendBtnClick() {
+        var nickname = document.getElementById("nickname").value;
+        if (nickname.trim() === "") {
+            alert("给个昵称呗");
+            return
+        }
+        var msg = document.getElementById("msg").value;
+        if (msg.trim() === "") {
+            alert("你想说点啥？");
+            return
+        }
+        websocket.send(nickname + "说：" + msg);
+        document.getElementById("msg").value = '';
+    }
+
+    function closeBtnClick() {
+        websocket.close();
+    }
+
+    function writeToScreen(message) {
+        var pre = document.createElement("p");
+        pre.style.wordWrap = "break-word";
+        pre.innerHTML = message;
+        document.getElementById("output").appendChild(pre);
+    }
+</script>
+</body>
+</html>

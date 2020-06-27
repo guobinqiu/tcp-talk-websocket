@@ -4,6 +4,7 @@ import (
 	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
+	"net/http/pprof"
 )
 
 var (
@@ -28,6 +29,7 @@ func init() {
 }
 
 func main() {
+	http.HandleFunc("/debug/pprof", pprof.Index)
 	http.HandleFunc("/ws", wsHandler)
 	http.ListenAndServe("0.0.0.0:7777", nil)
 }

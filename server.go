@@ -15,7 +15,17 @@ var (
 	}
 )
 
-var conns = make(map[*websocket.Conn]*websocket.Conn)
+var conns = make(map[string]*websocket.Conn)
+
+type message struct {
+	From    string `json:"from"`
+	To      string `json:"to"`
+	Content string `json:"content"`
+}
+
+func init() {
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+}
 
 func main() {
 	http.HandleFunc("/ws", wsHandler)
@@ -29,27 +39,45 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	conns[conn] = conn
-
 	go handleConn(conn, conns)
 }
 
-func handleConn(conn *websocket.Conn, conns map[*websocket.Conn]*websocket.Conn) {
+func handleConn(conn *websocket.Conn, conns map[string]*websocket.Conn) {
 	for {
-		_, data, err := conn.ReadMessage()
+		msg := message{}
+		err := conn.ReadJSON(&msg)
 		if err != nil {
 			log.Println(err)
 			conn.Close()
-			delete(conns, conn)
+			delete(conns, msg.From)
 			break
 		}
 
-		for out := range conns {
-			if err := out.WriteMessage(websocket.TextMessage, data); err != nil {
+		if _, ok := conns[msg.From]; !ok {
+			conns[msg.From] = conn
+		}
+
+		if msg.To != "" {
+			if out, ok := conns[msg.To]; ok {
+				if err := out.WriteJSON(&msg); err != nil {
+					log.Println(err)
+					out.Close()
+					delete(conns, msg.To)
+				}
+			}
+			if err := conn.WriteJSON(&msg); err != nil {
 				log.Println(err)
-				out.Close()
-				delete(conns, out)
-				continue
+				conn.Close()
+				delete(conns, msg.From)
+			}
+		} else {
+			for k, v := range conns {
+				if err := v.WriteJSON(&msg); err != nil {
+					log.Println(err)
+					v.Close()
+					delete(conns, k)
+					continue
+				}
 			}
 		}
 	}

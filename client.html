@@ -3,59 +3,62 @@
 <head>
     <title>go websocket</title>
     <meta charset="utf-8"/>
+    <script src="http://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
 </head>
 <body>
 <h2>WebSocket Chat</h2>
-<div id="output"></div>
-<input type="text" id="nickname" placeholder="昵称"></input>
-<input type="text" id="msg" placeholder="消息"></input>
-<button onclick="sendBtnClick()">send</button>
-<button onclick="closeBtnClick()">close</button>
+<div id="outputDiv"></div>
+<form>
+    Your Username: <input type="text" id="from" required="required"/>
+    To Username: <input type="text" id="to"/>
+    Content: <input type="text" id="content" required="required"/>
+    <button type="submit">send</button>
+</form>
 <script type="text/javascript">
 
-    websocket = new WebSocket("ws://127.0.0.1:7777/ws");
+    var websocket = null;
 
-    websocket.onopen = function (e) {
-        console.log("connected")
-    };
+    if (window.WebSocket) {
+        console.log("websocket is supported");
+        websocket = new WebSocket("ws://127.0.0.1:7777/ws");
 
-    websocket.onclose = function (e) {
-        console.log("closed")
-    };
+        websocket.onopen = function (e) {
+            console.log("connected")
+        };
 
-    websocket.onmessage = function (e) {
-        writeToScreen(e.data);
-    };
+        websocket.onclose = function (e) {
+            console.log("closed")
+        };
 
-    websocket.onerror = function (e) {
-        console.log(e.data)
-    };
+        websocket.onmessage = function (e) {
+            var jsonObject = JSON.parse(e.data);
+            $("#outputDiv").append("<p>" + jsonObject.from + "对" + (jsonObject.to === "" ? "所有人" : jsonObject.to) + "说:" + jsonObject.content + "</p>");
+        };
 
-    function sendBtnClick() {
-        var nickname = document.getElementById("nickname").value;
-        if (nickname.trim() === "") {
-            alert("给个昵称呗");
-            return
+        websocket.onerror = function (e) {
+            console.log(e.data)
+        };
+    } else {
+        console.log("websocket is not supported");
+    }
+
+    window.onbeforeunload = function () {
+        if (null != websocket) {
+            websocket.close();
         }
-        var msg = document.getElementById("msg").value;
-        if (msg.trim() === "") {
-            alert("你想说点啥？");
-            return
+    };
+
+    $("form").submit(function (e) {
+        e.preventDefault();
+        if (null != websocket) {
+            var mes = {
+                "from": $("#from").val(),
+                "to": $("#to").val(),
+                "content": $("#content").val()
+            };
+            websocket.send(JSON.stringify(mes));
         }
-        websocket.send(nickname + "说：" + msg);
-        document.getElementById("msg").value = '';
-    }
-
-    function closeBtnClick() {
-        websocket.close();
-    }
-
-    function writeToScreen(message) {
-        var pre = document.createElement("p");
-        pre.style.wordWrap = "break-word";
-        pre.innerHTML = message;
-        document.getElementById("output").appendChild(pre);
-    }
+    });
 </script>
 </body>
 </html>

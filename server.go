@@ -45,8 +45,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 func handleConn(conn *websocket.Conn, conns map[string]*websocket.Conn) {
 	for {
 		msg := message{}
-		err := conn.ReadJSON(&msg)
-		if err != nil {
+		if err := conn.ReadJSON(&msg); err != nil {
 			log.Println(err)
 			conn.Close()
 			delete(conns, msg.From)
@@ -69,6 +68,7 @@ func handleConn(conn *websocket.Conn, conns map[string]*websocket.Conn) {
 				log.Println(err)
 				conn.Close()
 				delete(conns, msg.From)
+				break
 			}
 		} else {
 			for k, v := range conns {
